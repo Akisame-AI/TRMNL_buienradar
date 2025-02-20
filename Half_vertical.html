@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+{% assign lopik = actual.stationmeasurements 
+  | where: 'stationname', 'Meetstation Lopik-Cabauw' 
+  | first 
+%}
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Weather Compact 800x240</title>
+  <style>
+    /* Constrain the overall page size to ~800x240 */
+    body {
+      width: 800px;
+      height: 240px;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      font-size: 13px; /* Slightly smaller font */
+      box-sizing: border-box;
+      overflow: hidden; /* Avoid scrollbars if content overflows */
+    }
+
+    /* Use flex layout for container */
+    .container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;  /* top-align content */
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 5px; /* minimal padding to save space */
+    }
+
+    /* Forecast area on the left */
+    .forecast-area {
+      flex: 1;      /* take remaining space */
+      min-width: 0; /* allow to shrink if needed */
+      margin-right: 8px; /* small gap before radar */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* "Now" block for current weather */
+    .now {
+      margin-bottom: 5px;
+      border: 1px solid black;
+      padding: 4px;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    /* Table: day columns, row = property */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 5px;
+      font-size: 12px; /* keep text smaller to fit space */
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 3px;  
+      text-align: center;
+      vertical-align: top;
+    }
+    th:first-child, td:first-child {
+      text-align: left; /* property column left-aligned */
+    }
+
+    /* Descriptions + short summary */
+    .description-block {
+      font-size: 12px;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+    .summary {
+      font-size: 12px; /* smaller text for summary */
+      line-height: 1.2;
+    }
+
+    /* Radar on the right */
+    .radar {
+      width: 240px;
+      flex-shrink: 0; /* keep ~240px */
+    }
+    .radar img {
+      display: block;
+      width: 100%;
+      height: auto;
+      /* Filters you specified */
+      filter: brightness(3) saturate(150%) invert(20%) hue-rotate(165deg) contrast(55) grayscale(1);
+    }
+
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- Left side: Current weather, property-based table, descriptions, summary -->
+  <div class="forecast-area">
+
+    <!-- "Now" block (current weather) -->
+    <div class="now">
+      <strong>Temp</strong>: {{ lopik.temperature }} °C (gevoel {{ lopik.feeltemperature }} °C) 
+      <strong>Wind</strong>: {{ lopik.windspeed }} m/s (Bft {{ lopik.windspeedBft }}) 
+      <strong>Richting</strong>: {{ lopik.winddirection }} <strong>Neerslag</strong>: {{ lopik.precipitation }} ({{ lopik.rainFallLastHour}}/h)</br>
+      <strong>Vocht</strong>: {{ lopik.humidity }}% 
+      <strong>Weer</strong>: {{ lopik.weatherdescription }} ({{ lopik.sunpower }})
+    </div>
+
+    <!-- Days in columns: day[0], day[1], day[2] -->
+    {% assign d0 = forecast.fivedayforecast[0] %}
+    {% assign d1 = forecast.fivedayforecast[1] %}
+    {% assign d2 = forecast.fivedayforecast[2] %}
+    {% assign d3 = forecast.fivedayforecast[3] %}
+    {% assign d4 = forecast.fivedayforecast[4] %}
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <!-- Day columns, short date (e.g. "Wo", "Do") -->
+          <th>{{ d0.day | date: "%a" }}</th>
+          <th>{{ d1.day | date: "%a" }}</th>
+          <th>{{ d2.day | date: "%a" }}</th>
+          <th>{{ d3.day | date: "%a" }}</th>
+          <th>{{ d4.day | date: "%a" }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Max Temp -->
+        <tr>
+          <td>Max Temp (°C)</td>
+          <td>{{ d0.maxtemperature }}</td>
+          <td>{{ d1.maxtemperature }}</td>
+          <td>{{ d2.maxtemperature }}</td>
+          <td>{{ d3.maxtemperature }}</td>
+          <td>{{ d4.maxtemperature }}</td>
+        </tr>
+        <!-- Min Temp -->
+        <tr>
+          <td>Min Temp (°C)</td>
+          <td>{{ d0.mintemperature }}</td>
+          <td>{{ d1.mintemperature }}</td>
+          <td>{{ d2.mintemperature }}</td>
+          <td>{{ d3.mintemperature }}</td>
+          <td>{{ d4.mintemperature }}</td>
+        </tr>
+        <!-- Rain % -->
+        <tr>
+          <td>Regen (%)</td>
+          <td>{{ d0.rainChance }}%</td>
+          <td>{{ d1.rainChance }}%</td>
+          <td>{{ d2.rainChance }}%</td>
+          <td>{{ d3.rainChance }}%</td>
+          <td>{{ d4.rainChance }}%</td>
+        </tr>
+        <!-- Min Rain (mm) -->
+        <tr>
+          <td>Min Regen (mm)</td>
+          <td>{{ d0.mmRainMin }}</td>
+          <td>{{ d1.mmRainMin }}</td>
+          <td>{{ d2.mmRainMin }}</td>
+          <td>{{ d3.mmRainMin }}</td>
+          <td>{{ d4.mmRainMin }}</td>
+        </tr>
+        <!-- Max Rain (mm) -->
+        <tr>
+          <td>Max Regen (mm)</td>
+          <td>{{ d0.mmRainMax }}</td>
+          <td>{{ d1.mmRainMax }}</td>
+          <td>{{ d2.mmRainMax }}</td>
+          <td>{{ d3.mmRainMax }}</td>
+          <td>{{ d4.mmRainMax }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Short-term forecast summary -->
+    <div class="summary">
+      <strong>Voorspelling:</strong> {{ forecast.shortterm.forecast }}
+    </div>
+  </div>
+
+  <!-- Right side: Radar image -->
+  <div class="radar">
+    <img 
+      class="image-dither"
+      src="https://image.buienradar.nl/2.0/image/single/RadarMapRainNL?height=512&width=512&renderBackground=True&renderBranding=False&renderText=True" 
+      alt="Radar"
+    >
+  </div>
+
+</div>
+</body>
+</html>
