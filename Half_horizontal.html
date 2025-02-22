@@ -1,108 +1,120 @@
 <!DOCTYPE html>
-{% assign lopik = actual.stationmeasurements 
-  | where: 'stationname', 'Meetstation Lopik-Cabauw' 
+{% assign prefix = trmnl.plugin_settings.custom_fields_values.Weather_station %}
+<!-- This is to deal with the parsing of variables TRMNL does -->
+{% assign station = trmnl.plugin_settings.custom_fields_values.Weather_station
+  | replace: "_", " "
+  | downcase %}
+{% for station in actual.stationmeasurements %}
+  {% assign lower_stationname = station.stationname | downcase %}
+  {% assign modified_stations = modified_stations | append: '{"stationname": "' | append: lower_stationname | append: '"}' %}
+
+  {% unless forloop.last %}
+    {% assign modified_stations = modified_stations | append: ',' %}
+  {% endunless %}
+{% endfor %}
+
+{% assign modified_stations = '[' | append: modified_stations | append: ']' %}
+{% assign modified_stations = modified_stations | parse_json %}
+{% assign lopik = actual.stationmeasurements
+  | where: 'stationname', 
   | first 
 %}
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Weather Compact 800x240</title>
-  <style>
-    /* Constrain the overall page size to ~800x240 */
-    body {
-      width: 800px;
-      height: 240px;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      font-size: 13px; /* Slightly smaller font */
-      box-sizing: border-box;
-      overflow: hidden; /* Avoid scrollbars if content overflows */
-    }
+<meta charset="UTF-8">
+<title>Weather Compact 800x240</title>
+<style>
+  /* Constrain the overall page size to ~800x240 */
+  /*body {
+    width: 800px;
+    height: 240px;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 13px; 
+    box-sizing: border-box;
+    overflow: hidden; 
+  }*/
 
-    /* Use flex layout for container */
-    .container {
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;  /* top-align content */
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      padding: 5px; /* minimal padding to save space */
-    }
+  /* Use flex layout for container */
+  .{{ prefix }}container {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;  /* top-align content */
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 5px; /* minimal padding to save space */
+  }
 
-    /* Forecast area on the left */
-    .forecast-area {
-      flex: 1;      /* take remaining space */
-      min-width: 0; /* allow to shrink if needed */
-      margin-right: 8px; /* small gap before radar */
-      display: flex;
-      flex-direction: column;
-    }
+  /* Forecast area on the left */
+  .{{ prefix }}forecast-area {
+    flex: 1;      /* take remaining space */
+    min-width: 0; /* allow to shrink if needed */
+    margin-right: 8px; /* small gap before radar */
+    display: flex;
+    flex-direction: column;
+  }
 
-    /* "Now" block for current weather */
-    .now {
-      margin-bottom: 5px;
-      border: 1px solid black;
-      padding: 4px;
-      font-size: 12px;
-      line-height: 1.2;
-    }
+  /* "Now" block for current weather */
+  .{{ prefix }}now {
+    margin-bottom: 5px;
+    border: 1px solid black;
+    padding: 4px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
 
-    /* Table: day columns, row = property */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 5px;
-      font-size: 12px; /* keep text smaller to fit space */
-    }
-    table, th, td {
-      border: 1px solid black;
-    }
-    th, td {
-      padding: 3px;  
-      text-align: center;
-      vertical-align: top;
-    }
-    th:first-child, td:first-child {
-      text-align: left; /* property column left-aligned */
-    }
+  /* Table: day columns, row = property */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5px;
+    font-size: 12px; /* keep text smaller to fit space */
+  }
+  table, th, td {
+    border: 1px solid black;
+  }
+  th, td {
+    padding: 3px;  
+    text-align: center;
+    vertical-align: top;
+  }
+  th:first-child, td:first-child {
+    text-align: left; /* property column left-aligned */
+  }
 
-    /* Descriptions + short summary */
-    .description-block {
-      font-size: 12px;
-      line-height: 1.2;
-      margin-bottom: 5px;
-    }
-    .summary {
-      font-size: 12px; /* smaller text for summary */
-      line-height: 1.2;
-    }
+  /* Descriptions + short summary */
+  .{{ prefix }}description-block {
+    font-size: 12px;
+    line-height: 1.2;
+    margin-bottom: 5px;
+  }
+  .{{ prefix }}summary {
+    font-size: 12px; /* smaller text for summary */
+    line-height: 1.2;
+  }
 
-    /* Radar on the right */
-    .radar {
-      width: 240px;
-      flex-shrink: 0; /* keep ~240px */
-    }
-    .radar img {
-      display: block;
-      width: 100%;
-      height: auto;
-      /* Filters you specified */
-      filter: brightness(3) saturate(150%) invert(20%) hue-rotate(165deg) contrast(55) grayscale(1);
-    }
+  /* Radar on the right */
+  .{{ prefix }}radar {
+    width: 240px;
+    flex-shrink: 0; /* keep ~240px */
+  }
+  .{{ prefix }}radar img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* Filters you specified */
+    filter: brightness(3) saturate(150%) invert(20%) hue-rotate(165deg) contrast(55) grayscale(1);
+  }
 
-  </style>
-</head>
+</style>
 
-<body>
-<div class="container">
+<div class="{{ prefix }}container">
 
   <!-- Left side: Current weather, property-based table, descriptions, summary -->
-  <div class="forecast-area">
+  <div class="{{ prefix }}forecast-area">
 
     <!-- "Now" block (current weather) -->
-    <div class="now">
+    <div class="{{ prefix }}now">
       <strong>Temp</strong>: {{ lopik.temperature }} °C (gevoel {{ lopik.feeltemperature }} °C) 
       <strong>Wind</strong>: {{ lopik.windspeed }} m/s (Bft {{ lopik.windspeedBft }}) 
       <strong>Richting</strong>: {{ lopik.winddirection }} <strong>Neerslag</strong>: {{ lopik.precipitation }} ({{ lopik.rainFallLastHour}}/h)</br>
@@ -179,13 +191,13 @@
     </table>
 
     <!-- Short-term forecast summary -->
-    <div class="summary">
+    <div class="{{ prefix }}summary">
       <strong>Voorspelling:</strong> {{ forecast.shortterm.forecast }}
     </div>
   </div>
 
   <!-- Right side: Radar image -->
-  <div class="radar">
+  <div class="{{ prefix }}radar">
     <img 
       class="image-dither"
       src="https://image.buienradar.nl/2.0/image/single/RadarMapRainNL?height=512&width=512&renderBackground=True&renderBranding=False&renderText=True" 
@@ -194,5 +206,3 @@
   </div>
 
 </div>
-</body>
-</html>
