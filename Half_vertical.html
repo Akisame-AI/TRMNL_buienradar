@@ -1,198 +1,201 @@
 <!DOCTYPE html>
-{% assign lopik = actual.stationmeasurements 
-  | where: 'stationname', 'Meetstation Lopik-Cabauw' 
+{% assign prefix = trmnl.plugin_settings.custom_fields_values.Weather_station %}
+<!-- This is to deal with the parsing of variables TRMNL does -->
+{% assign station = trmnl.plugin_settings.custom_fields_values.Weather_station
+  | replace: "_", " "
+  | downcase %}
+{% for station in actual.stationmeasurements %}
+  {% assign lower_stationname = station.stationname | downcase %}
+  {% assign modified_stations = modified_stations | append: '{"stationname": "' | append: lower_stationname | append: '"}' %}
+
+  {% unless forloop.last %}
+    {% assign modified_stations = modified_stations | append: ',' %}
+  {% endunless %}
+{% endfor %}
+
+{% assign modified_stations = '[' | append: modified_stations | append: ']' %}
+{% assign modified_stations = modified_stations | parse_json %}
+{% assign lopik = actual.stationmeasurements
+  | where: 'stationname', 
   | first 
 %}
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Weather Compact 800x240</title>
-  <style>
-    /* Constrain the overall page size to ~800x240 */
-    body {
-      width: 800px;
-      height: 240px;
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      font-size: 13px; /* Slightly smaller font */
-      box-sizing: border-box;
-      overflow: hidden; /* Avoid scrollbars if content overflows */
-    }
+<meta charset="UTF-8">
+<title>Weather Compact 400x480</title>
+<style>
+  /* Constrain the overall page size to ~400x480 */
+  /*body {
+    width: 400px;
+    height: 480px;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    font-size: 12px; 
+    box-sizing: border-box;
+    overflow: hidden; 
+  }*/
 
-    /* Use flex layout for container */
-    .container {
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;  /* top-align content */
-      width: 100%;
-      height: 100%;
-      box-sizing: border-box;
-      padding: 5px; /* minimal padding to save space */
-    }
+  /* Container: stack elements top-to-bottom */
+  .{{ prefix }}container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 5px; /* minimal padding to save space */
+  }
 
-    /* Forecast area on the left */
-    .forecast-area {
-      flex: 1;      /* take remaining space */
-      min-width: 0; /* allow to shrink if needed */
-      margin-right: 8px; /* small gap before radar */
-      display: flex;
-      flex-direction: column;
-    }
+  /* Forecast area (current weather + table + summary) on top */
+  .{{ prefix }}forecast-area {
+    flex: 1;      /* take remaining vertical space */
+    min-height: 0;/* allow to shrink if needed */
+    margin-bottom: 5px;
+    display: flex;
+    flex-direction: column;
+  }
 
-    /* "Now" block for current weather */
-    .now {
-      margin-bottom: 5px;
-      border: 1px solid black;
-      padding: 4px;
-      font-size: 12px;
-      line-height: 1.2;
-    }
+  /* "Now" block for current weather */
+  .{{ prefix }}now {
+    margin-bottom: 5px;
+    border: 1px solid black;
+    padding: 4px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
 
-    /* Table: day columns, row = property */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 5px;
-      font-size: 12px; /* keep text smaller to fit space */
-    }
-    table, th, td {
-      border: 1px solid black;
-    }
-    th, td {
-      padding: 3px;  
-      text-align: center;
-      vertical-align: top;
-    }
-    th:first-child, td:first-child {
-      text-align: left; /* property column left-aligned */
-    }
+  /* If table becomes wider than 400px, let it scroll horizontally */
+  .{{ prefix }}table-wrapper {
+    overflow-x: auto;
+    flex-shrink: 0; 
+  }
 
-    /* Descriptions + short summary */
-    .description-block {
-      font-size: 12px;
-      line-height: 1.2;
-      margin-bottom: 5px;
-    }
-    .summary {
-      font-size: 12px; /* smaller text for summary */
-      line-height: 1.2;
-    }
+  table {
+    border-collapse: collapse;
+    margin-bottom: 5px;
+    min-width: 350px; /* force table to keep columns if we have 5 days */
+    font-size: 11px;  /* reduce text to fit columns better */
+  }
+  table, th, td {
+    border: 1px solid black;
+  }
+  th, td {
+    padding: 3px;  
+    text-align: center;
+    vertical-align: top;
+  }
+  th:first-child, td:first-child {
+    text-align: left; /* property column left-aligned */
+  }
 
-    /* Radar on the right */
-    .radar {
-      width: 240px;
-      flex-shrink: 0; /* keep ~240px */
-    }
-    .radar img {
-      display: block;
-      width: 100%;
-      height: auto;
-      /* Filters you specified */
-      filter: brightness(3) saturate(150%) invert(20%) hue-rotate(165deg) contrast(55) grayscale(1);
-    }
+  /* Short-term forecast summary */
+  .{{ prefix }}summary {
+    font-size: 11px;
+    line-height: 1.2;
+  }
 
-  </style>
-</head>
+  /* Radar at bottom with fixed height (adjust as desired) */
+  .{{ prefix }}radar {
+    flex-shrink: 0;
+    height: 220px; /* Leaves ~300px above for forecast area */
+    border: 1px solid #ccc;
+    overflow: hidden;
+  }
+  .{{ prefix }}radar img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* fill the box, might crop if ratio differs */
+    /* Filters */
+    filter: brightness(3) saturate(150%) invert(20%) hue-rotate(165deg) contrast(55) grayscale(1);
+  }
 
-<body>
-<div class="container">
+</style>
 
-  <!-- Left side: Current weather, property-based table, descriptions, summary -->
-  <div class="forecast-area">
+<div class="{{ prefix }}container">
+  <!-- Top block: Current weather, table, summary -->
+  <div class="{{ prefix }}forecast-area">
 
     <!-- "Now" block (current weather) -->
-    <div class="now">
-      <strong>Temp</strong>: {{ lopik.temperature }} °C (gevoel {{ lopik.feeltemperature }} °C) 
-      <strong>Wind</strong>: {{ lopik.windspeed }} m/s (Bft {{ lopik.windspeedBft }}) 
-      <strong>Richting</strong>: {{ lopik.winddirection }} <strong>Neerslag</strong>: {{ lopik.precipitation }} ({{ lopik.rainFallLastHour}}/h)</br>
-      <strong>Vocht</strong>: {{ lopik.humidity }}% 
-      <strong>Weer</strong>: {{ lopik.weatherdescription }} ({{ lopik.sunpower }})
+    <div class="{{ prefix }}now">
+      <strong>Temp:</strong> {{ lopik.temperature }} °C (gevoel {{ lopik.feeltemperature }} °C)
+      <strong>Wind:</strong> {{ lopik.windspeed }} m/s
+      <strong>Richting:</strong> {{ lopik.winddirection }}
+      <strong>Vocht:</strong> {{ lopik.humidity }}%</br>
+      <strong>Weer:</strong> {{ lopik.weatherdescription }} <strong>Neerslag</strong>: {{ lopik.precipitation }} ({{ lopik.rainFallLastHour}}/h)
     </div>
 
-    <!-- Days in columns: day[0], day[1], day[2] -->
+    <!-- Days in columns: day[0..4] -->
     {% assign d0 = forecast.fivedayforecast[0] %}
     {% assign d1 = forecast.fivedayforecast[1] %}
     {% assign d2 = forecast.fivedayforecast[2] %}
     {% assign d3 = forecast.fivedayforecast[3] %}
-    {% assign d4 = forecast.fivedayforecast[4] %}
 
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <!-- Day columns, short date (e.g. "Wo", "Do") -->
-          <th>{{ d0.day | date: "%a" }}</th>
-          <th>{{ d1.day | date: "%a" }}</th>
-          <th>{{ d2.day | date: "%a" }}</th>
-          <th>{{ d3.day | date: "%a" }}</th>
-          <th>{{ d4.day | date: "%a" }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Max Temp -->
-        <tr>
-          <td>Max Temp (°C)</td>
-          <td>{{ d0.maxtemperature }}</td>
-          <td>{{ d1.maxtemperature }}</td>
-          <td>{{ d2.maxtemperature }}</td>
-          <td>{{ d3.maxtemperature }}</td>
-          <td>{{ d4.maxtemperature }}</td>
-        </tr>
-        <!-- Min Temp -->
-        <tr>
-          <td>Min Temp (°C)</td>
-          <td>{{ d0.mintemperature }}</td>
-          <td>{{ d1.mintemperature }}</td>
-          <td>{{ d2.mintemperature }}</td>
-          <td>{{ d3.mintemperature }}</td>
-          <td>{{ d4.mintemperature }}</td>
-        </tr>
-        <!-- Rain % -->
-        <tr>
-          <td>Regen (%)</td>
-          <td>{{ d0.rainChance }}%</td>
-          <td>{{ d1.rainChance }}%</td>
-          <td>{{ d2.rainChance }}%</td>
-          <td>{{ d3.rainChance }}%</td>
-          <td>{{ d4.rainChance }}%</td>
-        </tr>
-        <!-- Min Rain (mm) -->
-        <tr>
-          <td>Min Regen (mm)</td>
-          <td>{{ d0.mmRainMin }}</td>
-          <td>{{ d1.mmRainMin }}</td>
-          <td>{{ d2.mmRainMin }}</td>
-          <td>{{ d3.mmRainMin }}</td>
-          <td>{{ d4.mmRainMin }}</td>
-        </tr>
-        <!-- Max Rain (mm) -->
-        <tr>
-          <td>Max Regen (mm)</td>
-          <td>{{ d0.mmRainMax }}</td>
-          <td>{{ d1.mmRainMax }}</td>
-          <td>{{ d2.mmRainMax }}</td>
-          <td>{{ d3.mmRainMax }}</td>
-          <td>{{ d4.mmRainMax }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <!-- Table with horizontal scroll if needed -->
+    <div class="{{ prefix }}table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>{{ d0.day | date: "%a" }}</th>
+            <th>{{ d1.day | date: "%a" }}</th>
+            <th>{{ d2.day | date: "%a" }}</th>
+            <th>{{ d3.day | date: "%a" }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Max Temp -->
+          <tr>
+            <td>Max Temp</td>
+            <td>{{ d0.maxtemperature }}</td>
+            <td>{{ d1.maxtemperature }}</td>
+            <td>{{ d2.maxtemperature }}</td>
+            <td>{{ d3.maxtemperature }}</td>
+          </tr>
+          <!-- Min Temp -->
+          <tr>
+            <td>Min Temp</td>
+            <td>{{ d0.mintemperature }}</td>
+            <td>{{ d1.mintemperature }}</td>
+            <td>{{ d2.mintemperature }}</td>
+            <td>{{ d3.mintemperature }}</td>
+          </tr>
+          <!-- Rain % -->
+          <tr>
+            <td>Regen (%)</td>
+            <td>{{ d0.rainChance }}%</td>
+            <td>{{ d1.rainChance }}%</td>
+            <td>{{ d2.rainChance }}%</td>
+            <td>{{ d3.rainChance }}%</td>
+          </tr>
+          <!-- Min Regen (mm) -->
+          <tr>
+            <td>Min Regen</td>
+            <td>{{ d0.mmRainMin }}</td>
+            <td>{{ d1.mmRainMin }}</td>
+            <td>{{ d2.mmRainMin }}</td>
+            <td>{{ d3.mmRainMin }}</td>
+          </tr>
+          <!-- Max Regen (mm) -->
+          <tr>
+            <td>Max Regen</td>
+            <td>{{ d0.mmRainMax }}</td>
+            <td>{{ d1.mmRainMax }}</td>
+            <td>{{ d2.mmRainMax }}</td>
+            <td>{{ d3.mmRainMax }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Short-term forecast summary -->
-    <div class="summary">
+    <div class="{{ prefix }}summary">
       <strong>Voorspelling:</strong> {{ forecast.shortterm.forecast }}
     </div>
   </div>
 
-  <!-- Right side: Radar image -->
-  <div class="radar">
-    <img 
-      class="image-dither"
-      src="https://image.buienradar.nl/2.0/image/single/RadarMapRainNL?height=512&width=512&renderBackground=True&renderBranding=False&renderText=True" 
-      alt="Radar"
-    >
+  <!-- Bottom block: Radar (fixed height ~180px) -->
+  <div class="{{ prefix }}radar">
+    <img class="image-dither"
+         src="https://image.buienradar.nl/2.0/image/single/RadarMapRainNL?height=512&amp;width=512&amp;renderBackground=True&amp;renderBranding=False&amp;renderText=True"
+         alt="Radar">
   </div>
-
 </div>
-</body>
-</html>
