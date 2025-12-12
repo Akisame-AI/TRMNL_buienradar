@@ -4,7 +4,8 @@ An implementation of Buienradar for the TRMNL
 ![Implementation example](https://github.com/user-attachments/assets/dcdee906-4b33-40bc-bcc2-3c7c47f7f5dc)
 
 ## Setting up the plugin
-Run the find_closest_station.py with your longitude and latitude. It will give you the name of the closest weather station to you.  
-Create a new private plugin and import the plugin zip file.  
+This plugin is included in TRMNL. However, if you want to set it up yourself you can create a new private plugin. 
+Select import zip file to import the included zip file. 
 A dropdown menu will show at the top.  
-Using this dropdown menu select the weather station that the python file returned.  
+Using this dropdown menu select the weather station that is closest to you or fill out your own coordinates and 
+supply your latitude and longitude below.   
