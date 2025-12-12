@@ -1,9 +1,8 @@
-```python
 import pandas as pd
 from geopy.distance import geodesic
 
 # User's coordinates
-user_coords = (<lat>, <lon>)
+user_coords = (52.0, 4.7)
 
 # List of stations with coordinates
 stations = [
@@ -56,5 +55,4 @@ for station in stations:
 
 # Find the closest station
 closest_station = min(stations, key=lambda x: x["distance"])
-closest_station
-```
+print(closest_station)

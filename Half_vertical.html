@@ -1,24 +1,172 @@
 <!DOCTYPE html>
 {% assign prefix = trmnl.plugin_settings.custom_fields_values.Weather_station %}
 <!-- This is to deal with the parsing of variables TRMNL does -->
-{% assign station = trmnl.plugin_settings.custom_fields_values.Weather_station
-  | replace: "_", " "
-  | downcase %}
-{% for station in actual.stationmeasurements %}
-  {% assign lower_stationname = station.stationname | downcase %}
-  {% assign modified_stations = modified_stations | append: '{"stationname": "' | append: lower_stationname | append: '"}' %}
+<!-- Thanks to Github user StrandmonYellow for suggesting this. I made using the raingraph a selectable option -->
+{% assign ws_raw = trmnl.plugin_settings.custom_fields_values.Weather_station | default: 'weather' %}
+<!-- quick flag for switching between direct weather station selection and using coordinates for backwards compatability -->
+{% assign view_mode = trmnl.plugin_settings.custom_fields_values.Raingraph
+  | default: 'forecast'
+  | downcase
+  | strip %}
 
-  {% unless forloop.last %}
-    {% assign modified_stations = modified_stations | append: ',' %}
-  {% endunless %}
+{% assign ws_norm = ws_raw | replace: '_', ' ' | replace: '-', ' ' | strip | downcase %}
+{% assign use_coords = false %}
+{% if ws_norm == 'use coordinates' %}
+  {% assign use_coords = true %}
+{% endif %}
+<!-- TRMNL's jinja uses integer math so we need a scale factor for the lattitude and londitude
+Please don't edit this or you will have to edit the stations lists as well-->
+{% assign SCALE = 1000 %}
+
+{% assign lat_raw = trmnl.plugin_settings.custom_fields_values.Latitude  | default: '' | replace: ',', '.' | strip %}
+{% assign lon_raw = trmnl.plugin_settings.custom_fields_values.Longitude | default: '' | replace: ',', '.' | strip %}
+
+{% if lat_raw == '' or lon_raw == '' %}
+  {% assign has_user_coords = false %}
+{% endif %}
+<!-- Users can really mess with inputs. This forces it to be a number, preserving
+floats using the scale we defined above, and swaps the lat-lon if we see a mistake-->
+{% assign lat_parts = lat_raw | split: '.' %}
+{% assign lat_ip = lat_parts[0] | plus: 0 %}
+{% assign lat_fp = '0' %}
+{% if lat_parts.size > 1 %}{% assign lat_fp = lat_parts[1] %}{% endif %}
+{% assign lat_fp3 = lat_fp | append: '000' | slice: 0, 3 | plus: 0 %}
+{% assign user_lat_i = lat_ip | times: SCALE | plus: lat_fp3 %}
+
+{% assign lon_parts = lon_raw | split: '.' %}
+{% assign lon_ip = lon_parts[0] | plus: 0 %}
+{% assign lon_fp = '0' %}
+{% if lon_parts.size > 1 %}{% assign lon_fp = lon_parts[1] %}{% endif %}
+{% assign lon_fp3 = lon_fp | append: '000' | slice: 0, 3 | plus: 0 %}
+{% assign user_lon_i = lon_ip | times: SCALE | plus: lon_fp3 %}
+
+{% if has_user_coords and user_lat_i < 20000 and user_lon_i > 20000 %}
+  {% assign _tmp = user_lat_i %}
+  {% assign user_lat_i = user_lon_i %}
+  {% assign user_lon_i = _tmp %}
+
+  {% assign _tmp2 = lat_raw %}
+  {% assign lat_raw = lon_raw %}
+  {% assign lon_raw = _tmp2 %}
+{% endif %}
+
+{% capture stations_json %}
+[
+  {"stationname":"meetstation arcen","lat":"51.5","lon":"6.2","lat_i":51500,"lon_i":6200},
+  {"stationname":"meetstation arnhem","lat":"52.07","lon":"5.88","lat_i":52070,"lon_i":5880},
+  {"stationname":"meetstation berkhout","lat":"52.65","lon":"4.98","lat_i":52650,"lon_i":4980},
+  {"stationname":"meetstation de bilt","lat":"52.1","lon":"5.18","lat_i":52100,"lon_i":5180},
+  {"stationname":"meetstation den helder","lat":"52.92","lon":"4.78","lat_i":52920,"lon_i":4780},
+  {"stationname":"meetstation eindhoven","lat":"51.45","lon":"5.42","lat_i":51450,"lon_i":5420},
+  {"stationname":"meetstation ell","lat":"51.2","lon":"5.77","lat_i":51200,"lon_i":5770},
+  {"stationname":"meetstation gilze rijen","lat":"51.57","lon":"4.93","lat_i":51570,"lon_i":4930},
+  {"stationname":"meetstation goes","lat":"51.53","lon":"3.9","lat_i":51530,"lon_i":3900},
+  {"stationname":"meetstation groenlo-hupsel","lat":"52.07","lon":"6.65","lat_i":52070,"lon_i":6650},
+  {"stationname":"meetstation groningen","lat":"53.13","lon":"6.58","lat_i":53130,"lon_i":6580},
+  {"stationname":"meetstation heino","lat":"52.43","lon":"6.27","lat_i":52430,"lon_i":6270},
+  {"stationname":"meetstation herwijnen","lat":"51.87","lon":"5.15","lat_i":51870,"lon_i":5150},
+  {"stationname":"meetstation hoek van holland","lat":"51.98","lon":"4.1","lat_i":51980,"lon_i":4100},
+  {"stationname":"meetstation hoogeveen","lat":"52.73","lon":"6.52","lat_i":52730,"lon_i":6520},
+  {"stationname":"meetstation hoorn terschelling","lat":"53.38","lon":"5.35","lat_i":53380,"lon_i":5350},
+  {"stationname":"meetstation houtribdijk","lat":"52.65","lon":"5.4","lat_i":52650,"lon_i":5400},
+  {"stationname":"meetstation ijmuiden","lat":"52.47","lon":"4.57","lat_i":52470,"lon_i":4570},
+  {"stationname":"meetstation lauwersoog","lat":"53.42","lon":"6.2","lat_i":53420,"lon_i":6200},
+  {"stationname":"meetstation leeuwarden","lat":"53.22","lon":"5.77","lat_i":53220,"lon_i":5770},
+  {"stationname":"meetstation lelystad","lat":"52.45","lon":"5.53","lat_i":52450,"lon_i":5530},
+  {"stationname":"meetstation lopik-cabauw","lat":"51.97","lon":"4.93","lat_i":51970,"lon_i":4930},
+  {"stationname":"meetstation maastricht","lat":"50.92","lon":"5.78","lat_i":50920,"lon_i":5780},
+  {"stationname":"meetstation marknesse","lat":"52.7","lon":"5.88","lat_i":52700,"lon_i":5880},
+  {"stationname":"meetstation nieuw beerta","lat":"53.2","lon":"7.15","lat_i":53200,"lon_i":7150},
+  {"stationname":"meetstation rotterdam","lat":"51.95","lon":"4.45","lat_i":51950,"lon_i":4450},
+  {"stationname":"meetstation rotterdam geulhaven","lat":"51.88","lon":"4.32","lat_i":51880,"lon_i":4320},
+  {"stationname":"meetstation schiphol","lat":"52.3","lon":"4.77","lat_i":52300,"lon_i":4770},
+  {"stationname":"meetstation stavoren","lat":"52.88","lon":"5.38","lat_i":52880,"lon_i":5380},
+  {"stationname":"meetstation texelhors","lat":"53","lon":"4.75","lat_i":53000,"lon_i":4750},
+  {"stationname":"meetstation twente","lat":"52.27","lon":"6.9","lat_i":52270,"lon_i":6900},
+  {"stationname":"meetstation vlieland","lat":"53.25","lon":"4.92","lat_i":53250,"lon_i":4920},
+  {"stationname":"meetstation vlissingen","lat":"51.45","lon":"3.6","lat_i":51450,"lon_i":3600},
+  {"stationname":"meetstation volkel","lat":"51.65","lon":"5.7","lat_i":51650,"lon_i":5700},
+  {"stationname":"meetstation voorschoten","lat":"52.12","lon":"4.43","lat_i":52120,"lon_i":4430},
+  {"stationname":"meetstation westdorpe","lat":"51.23","lon":"3.83","lat_i":51230,"lon_i":3830},
+  {"stationname":"meetstation wijdenes","lat":"52.63","lon":"5.17","lat_i":52630,"lon_i":5170},
+  {"stationname":"meetstation wijk aan zee","lat":"52.5","lon":"4.6","lat_i":52500,"lon_i":4600},
+  {"stationname":"meetstation woensdrecht","lat":"51.45","lon":"4.33","lat_i":51450,"lon_i":4330},
+  {"stationname":"meetstation zeeplatform f-3","lat":"54.85","lon":"4.73","lat_i":54850,"lon_i":4730}
+]
+{% endcapture %}
+{% assign stations = stations_json | strip | parse_json %}
+
+{% assign selected_station = ws_raw | replace: "_", " " | replace: "-", " " | strip | downcase %}
+{% assign best_station = nil %}
+{% assign best_dist2  = nil %}
+
+{% if use_coords %}
+  {% if has_user_coords %}
+    {% for s in stations %}
+      {% assign s_lat_i = s.lat_i | plus: 0 %}
+      {% assign s_lon_i = s.lon_i | plus: 0 %}
+
+      {% assign dlat  = s_lat_i | minus: user_lat_i %}
+      {% assign dlon  = s_lon_i | minus: user_lon_i %}
+      {% assign dlat2 = dlat | times: dlat %}
+      {% assign dlon2 = dlon | times: dlon %}
+      {% assign dist2 = dlat2 | plus: dlon2 %}
+
+      {% if best_dist2 == nil or dist2 <= best_dist2 %}
+        {% assign best_dist2 = dist2 %}
+        {% assign best_station = s %}
+      {% endif %}
+    {% endfor %}
+
+    {% if best_station != nil %}
+      {% assign selected_station = best_station.stationname %}
+    {% else %}
+      {% assign selected_station = 'meetstation lopik-cabauw' %}
+    {% endif %}
+  {% else %}
+    {% assign selected_station = 'meetstation lopik-cabauw' %}
+  {% endif %}
+{% endif %}
+
+{% if selected_station == nil or selected_station == '' %}
+  {% assign selected_station = 'meetstation lopik-cabauw' %}
+{% endif %}
+
+{% assign lopik = nil %}
+{% assign selected_station_lc = selected_station | downcase %}
+{% for m in actual.stationmeasurements %}
+  {% if m.stationname and (m.stationname | downcase) == selected_station_lc %}
+    {% assign lopik = m %}
+    {% break %}
+  {% endif %}
 {% endfor %}
+{% if lopik == nil %}
+  {% assign lopik = actual.stationmeasurements | first %}
+{% endif %}
 
-{% assign modified_stations = '[' | append: modified_stations | append: ']' %}
-{% assign modified_stations = modified_stations | parse_json %}
-{% assign lopik = actual.stationmeasurements
-  | where: 'stationname', 
-  | first 
-%}
+{% assign station_obj = best_station %}
+{% if station_obj == nil %}
+  {% for s in stations %}
+    {% if s.stationname == selected_station_lc %}
+      {% assign station_obj = s %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% assign _lat = '' %}
+{% assign _lon = '' %}
+
+{% if use_coords and has_user_coords %}
+  {% assign _lat = lat_raw %}
+  {% assign _lon = lon_raw %}
+{% elsif station_obj != nil %}
+  {% assign _lat = station_obj.lat %}
+  {% assign _lon = station_obj.lon %}
+{% endif %}
+
+{% if _lat == '' %}{% assign _lat = '51.97' %}{% endif %}
+{% if _lon == '' %}{% assign _lon = '4.93' %}{% endif %}
 <meta charset="UTF-8">
 <title>Weather Compact 400x480</title>
 <style>
@@ -35,7 +183,7 @@
   }*/
 
   /* Container: stack elements top-to-bottom */
-  .{{ prefix }}container {
+  .{{ prefix }}_container {
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -45,7 +193,7 @@
   }
 
   /* Forecast area (current weather + table + summary) on top */
-  .{{ prefix }}forecast-area {
+  .{{ prefix }}_forecast-area {
     flex: 1;      /* take remaining vertical space */
     min-height: 0;/* allow to shrink if needed */
     margin-bottom: 5px;
@@ -54,7 +202,7 @@
   }
 
   /* "Now" block for current weather */
-  .{{ prefix }}now {
+  .{{ prefix }}_now {
     margin-bottom: 5px;
     border: 1px solid black;
     padding: 4px;
@@ -63,7 +211,7 @@
   }
 
   /* If table becomes wider than 400px, let it scroll horizontally */
-  .{{ prefix }}table-wrapper {
+  .{{ prefix }}_table-wrapper {
     overflow-x: auto;
     flex-shrink: 0; 
   }
@@ -87,19 +235,19 @@
   }
 
   /* Short-term forecast summary */
-  .{{ prefix }}summary {
+  .{{ prefix }}_summary {
     font-size: 11px;
     line-height: 1.2;
   }
 
   /* Radar at bottom with fixed height (adjust as desired) */
-  .{{ prefix }}radar {
+  .{{ prefix }}_radar {
     flex-shrink: 0;
     height: 220px; /* Leaves ~300px above for forecast area */
     border: 1px solid #ccc;
     overflow: hidden;
   }
-  .{{ prefix }}radar img {
+  .{{ prefix }}_radar img {
     display: block;
     width: 100%;
     height: 100%;
@@ -110,12 +258,12 @@
 
 </style>
 
-<div class="{{ prefix }}container">
+<div class="{{ prefix }}_container">
   <!-- Top block: Current weather, table, summary -->
-  <div class="{{ prefix }}forecast-area">
+  <div class="{{ prefix }}_forecast-area">
 
     <!-- "Now" block (current weather) -->
-    <div class="{{ prefix }}now">
+    <div class="{{ prefix }}_now">
       <strong>Temp:</strong> {{ lopik.temperature }} °C (gevoel {{ lopik.feeltemperature }} °C)
       <strong>Wind:</strong> {{ lopik.windspeed }} m/s
       <strong>Richting:</strong> {{ lopik.winddirection }}
@@ -123,6 +271,167 @@
       <strong>Weer:</strong> {{ lopik.weatherdescription }} <strong>Neerslag</strong>: {{ lopik.precipitation }} ({{ lopik.rainFallLastHour}}/h)
     </div>
 
+    {% if view_mode == 'raingraph' %}
+
+      <div class="{{ prefix }}_rainwrap">
+        <div class="{{ prefix }}_rainbox">
+          <svg id="{{ prefix }}-precip-chart"
+               viewBox="0 0 360 80"
+               preserveAspectRatio="none"
+               style="position:absolute;left:0;top:0;width:100%;height:76px"></svg>
+
+          <div id="{{ prefix }}-precip-times" class="{{ prefix }}_raintimes"></div>
+        </div>
+      </div>
+
+      <script>
+      (function(){
+        const rawLat='{{ _lat | default: "51.97" }}'.replace(',', '.').trim();
+        const rawLon='{{ _lon | default: "4.93" }}'.replace(',', '.').trim();
+        let lat = parseFloat(rawLat), lon = parseFloat(rawLon);
+        if (!isFinite(lat) || !isFinite(lon)) { lat=51.97; lon=4.93; }
+        if (Math.abs(lat) < 15 && Math.abs(lon) > 20) { const t=lat; lat=lon; lon=t; }
+
+        const W=360, H=80, PAD=5;
+        const svg=document.getElementById('{{ prefix }}-precip-chart');
+        const timesEl=document.getElementById('{{ prefix }}-precip-times');
+        const NS=svg.namespaceURI;
+        const log10 = Math.log10 ? Math.log10 : (x)=>Math.log(x)/Math.LN10;
+
+        const toMMh = c => { const n=parseInt(c,10); return isNaN(n)?0:Math.pow(10,(n-109)/32); };
+        const timeToMin=t=>{ const [hh,mm]=t.split(':').map(Number); return hh*60+mm; };
+        const minToTime=m=>{ const hh=Math.floor(((m%1440)+1440)%1440/60), mm=((m%60)+60)%60;
+                             return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+
+        // Visual mapping similar to Buienradar
+        const V0 = 0.05, V1 = 4.0;
+        function visY(v){
+          const num  = log10(v + V0) - log10(V0);
+          const denom= log10(V1 + V0) - log10(V0);
+          return Math.max(0, Math.min(1, num / (denom || 1)));
+        }
+
+        function draw(series, labelXs){
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+          // horizontal grid (light)
+          for (let i=0;i<=4;i++){
+            const y=PAD+i*(H-PAD*2)/4;
+            const ln=document.createElementNS(NS,'line');
+            ln.setAttribute('x1',PAD); ln.setAttribute('x2',W-PAD);
+            ln.setAttribute('y1',y);   ln.setAttribute('y2',y);
+            ln.setAttribute('stroke','#000'); ln.setAttribute('opacity','0.15');
+            svg.appendChild(ln);
+          }
+          // vertical grid at labels
+          labelXs.forEach(x=>{
+            const ln=document.createElementNS(NS,'line');
+            ln.setAttribute('x1',x); ln.setAttribute('x2',x);
+            ln.setAttribute('y1',PAD); ln.setAttribute('y2',H-PAD);
+            ln.setAttribute('stroke','#000'); ln.setAttribute('opacity','0.12');
+            svg.appendChild(ln);
+          });
+
+          if (!series || !series.length) return;
+
+          const hasRain = series.some(d=>d.mmh>0);
+          if (!hasRain){
+            const base=document.createElementNS(NS,'line');
+            base.setAttribute('x1',PAD); base.setAttribute('x2',W-PAD);
+            base.setAttribute('y1',H-PAD-1); base.setAttribute('y2',H-PAD-1);
+            base.setAttribute('stroke','#000'); base.setAttribute('stroke-width','1');
+            base.setAttribute('opacity','0.6'); svg.appendChild(base);
+            return;
+          }
+
+          const sx=(W-PAD*2)/(series.length-1);
+          let dA=`M ${PAD},${H-PAD}`;
+          let dL=`M ${PAD},${H-PAD}`;
+
+          series.forEach((d,i)=>{
+            const x = PAD + i*sx;
+            const y = H - PAD - visY(d.mmh) * 0.9 * (H - PAD*2);
+            dA += ` L ${x.toFixed(1)},${y.toFixed(1)}`;
+            dL += ` L ${x.toFixed(1)},${y.toFixed(1)}`;
+          });
+          dA += ` L ${W-PAD},${H-PAD} Z`;
+
+          const area=document.createElementNS(NS,'path');
+          area.setAttribute('d',dA);
+          area.setAttribute('fill','#000');
+          area.setAttribute('opacity','0.50');
+          svg.appendChild(area);
+
+          const line=document.createElementNS(NS,'path');
+          line.setAttribute('d',dL);
+          line.setAttribute('fill','none');
+          line.setAttribute('stroke','#000');
+          line.setAttribute('stroke-width','1.4');
+          svg.appendChild(line);
+        }
+
+        function layoutAxis(firstT,lastT){
+          const first=timeToMin(firstT), last=timeToMin(lastT);
+          const start = first + ((30 - (first % 30)) % 30);
+          const labels=[]; for (let m=start; m<=last; m+=30) labels.push(minToTime(m));
+
+          timesEl.innerHTML=''; timesEl.style.position='relative';
+          const xs=[];
+          if (labels.length){
+            const total = last - first || 120;
+            labels.forEach(lbl=>{
+              const pos=(timeToMin(lbl)-first)/total;
+              const x=PAD + pos*(W - PAD*2);
+              xs.push(x);
+              const span=document.createElement('span');
+              span.textContent=lbl;
+              span.style.position='absolute';
+              span.style.left=`calc(${(x/W)*100}% - 14px)`;
+              span.style.bottom='0';
+              timesEl.appendChild(span);
+            });
+          }
+          return xs;
+        }
+
+        function build(series){
+          if (!series.length){ draw(null, []); return; }
+          const xs = layoutAxis(series[0].t, series[series.length-1].t);
+          draw(series, xs);
+        }
+
+        const url=`https://gpsgadget.buienradar.nl/data/raintext?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&t=${Date.now()}`;
+        fetch(url,{cache:'no-store'})
+          .then(r=>r.ok?r.text():Promise.reject(r.status))
+          .then(text=>{
+            const lines=(text||'').trim().split('\n').filter(Boolean);
+            const series = lines.map(line=>{
+              const [code,time] = line.split('|');
+              return { t: time, mmh: toMMh(code) };
+            });
+            build(series);
+          })
+          .catch(()=>{
+            const now=new Date(); const m5=Math.ceil(now.getMinutes()/5)*5;
+            const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),now.getHours(),m5,0);
+            const series=[];
+            for(let i=0;i<24;i++){
+              const t=new Date(start.getTime()+i*5*60000);
+              const hh=String(t.getHours()).padStart(2,'0');
+              const mm=String(t.getMinutes()).padStart(2,'0');
+              series.push({ t:`${hh}:${mm}`, mmh:0 });
+            }
+            build(series);
+          });
+      })();
+      </script>
+
+      <div class="{{ prefix }}_summary">
+        <strong>Voorspelling:</strong> {{ forecast.shortterm.forecast }}
+      </div>
+
+    {% else %}
+    
     <!-- Days in columns: day[0..4] -->
     {% assign d0 = forecast.fivedayforecast[0] %}
     {% assign d1 = forecast.fivedayforecast[1] %}
@@ -130,7 +439,7 @@
     {% assign d3 = forecast.fivedayforecast[3] %}
 
     <!-- Table with horizontal scroll if needed -->
-    <div class="{{ prefix }}table-wrapper">
+    <div class="{{ prefix }}_table-wrapper">
       <table>
         <thead>
           <tr>
@@ -185,15 +494,16 @@
         </tbody>
       </table>
     </div>
+    {% endif %}
 
     <!-- Short-term forecast summary -->
-    <div class="{{ prefix }}summary">
+    <div class="{{ prefix }}_summary">
       <strong>Voorspelling:</strong> {{ forecast.shortterm.forecast }}
     </div>
   </div>
 
   <!-- Bottom block: Radar (fixed height ~180px) -->
-  <div class="{{ prefix }}radar">
+  <div class="{{ prefix }}_radar">
     <img class="image-dither"
          src="https://image.buienradar.nl/2.0/image/single/RadarMapRainNL?height=512&amp;width=512&amp;renderBackground=True&amp;renderBranding=False&amp;renderText=True"
          alt="Radar">

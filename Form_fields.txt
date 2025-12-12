@@ -1,0 +1,66 @@
+- keyname: Weather_station
+  field_type: select
+  options:
+    - 'Use coordinates'
+    - 'Meetstation Arcen'
+    - 'Meetstation Arnhem'
+    - 'Meetstation Berkhout'
+    - 'Meetstation De Bilt'
+    - 'Meetstation Den Helder'
+    - 'Meetstation Eindhoven'
+    - 'Meetstation Ell'
+    - 'Meetstation Gilze Rijen'
+    - 'Meetstation Goes'
+    - 'Meetstation Groenlo-Hupsel'
+    - 'Meetstation Groningen'
+    - 'Meetstation Heino'
+    - 'Meetstation Herwijnen'
+    - 'Meetstation Hoek van Holland'
+    - 'Meetstation Hoogeveen'
+    - 'Meetstation Hoorn Terschelling'
+    - 'Meetstation Houtribdijk'
+    - 'Meetstation IJmuiden'
+    - 'Meetstation Lauwersoog'
+    - 'Meetstation Leeuwarden'
+    - 'Meetstation Lelystad'
+    - 'Meetstation Lopik-Cabauw'
+    - 'Meetstation Maastricht'
+    - 'Meetstation Marknesse'
+    - 'Meetstation Nieuw Beerta'
+    - 'Meetstation Rotterdam'
+    - 'Meetstation Rotterdam Geulhaven'
+    - 'Meetstation Schiphol'
+    - 'Meetstation Stavoren'
+    - 'Meetstation Texelhors'
+    - 'Meetstation Twente'
+    - 'Meetstation Vlieland'
+    - 'Meetstation Vlissingen'
+    - 'Meetstation Volkel'
+    - 'Meetstation Voorschoten'
+    - 'Meetstation Westdorpe'
+    - 'Meetstation Wijdenes'
+    - 'Meetstation Wijk aan Zee'
+    - 'Meetstation Woensdrecht'
+    - 'Meetstation Zeeplatform F-3'
+  name: Weather station
+  description: Indicated the closest weather station to your location. You can use the python file from https://github.com/Akisame-AI/TRMNL_buienradar to help.
+- keyname: Raingraph
+  field_type: select
+  name: Would you like to see the raingraph or the 5 day forecast?
+  options:
+    - 'raingraph'
+    - 'forecast'
+  description: You can select whether you want to display the upcoming rain graph for your location (requires lat-lon coordinates) or to display the 5 day general forecast.
+- keyname: Latitude
+  field_type: string
+  name: Latitude for raingraph
+  placeholder: 52.000000
+  description: Provide your latitude (decimal degrees)
+  optional: true
+
+- keyname: Longitude
+  field_type: string
+  name: Longitude for raingraph
+  placeholder: 5.000000
+  description: Provide your longitude (decimal degrees)
+  optional: true
